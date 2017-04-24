@@ -9,6 +9,7 @@ from guess_language import guess_language
 import json
 from pandas.io.json import json_normalize
 import re
+from functools import partial
 
 
 
@@ -26,6 +27,7 @@ def normalize_to_df(course_list):
 coursera = openjson('courserav1.json')
 edx = openjson('edx.json')
 udacity = openjson('udacity.json')
+# Commented for second pass, need to find a way to traverse the tree like structure
 # khanacademy = openjson('khanacademy.json')
 futurelearn = openjson('futurelearn.json')
 goodreads = openjson('goodreads-cs.json')
@@ -94,23 +96,25 @@ def get_category_edx(row):
 def get_category_udacity(row):
     if row is None: 
         return row
-    domain_col = row[27]
+    domain_col = row[26]
     num_domains = len(domain_col)
-    row['maxtitles'] = num_domains
+    # row['maxtitles'] = num_domains
     if num_domains > 7:
         num_domains = 7
     for i in range(0, num_domains):
         row['subject' + str(i)] = domain_col[i]
     return row
 
-# futurelearn has its categories in futurelearn_df['categories']
-# udacity['tracks']
 
+def get_category_futurelearn(row):
+    if row is None: 
+        return row
+    domain_col = row[0]
+    num_domains = len(domain_col)
+    for i in range(0, num_domains):
+        row['subject' + str(i)] = domain_col[i]
+    return row
 
-
-    
-    
-    
 def search(text,n, target):
     # word = r"\W*([\w]+)"
     # groups = re.search(r'{}\W*{}{}'.format(word*n,target,word*n), text).groups()
@@ -143,14 +147,18 @@ coursera_df = coursera_df.apply(get_category_coursera, axis=1)
 coursera_df = coursera_df[['name','categoryonesub','description','workload','slug']]
 # Change workload to common unit of weeks
 searchpartial = partial(search, n = 1, target = 'hours')
-coursera['Hours'] = coursera_df['workload'].apply(searchpartial)
+# to convert into hours WIP
+# coursera['Hours'] = coursera_df['workload'].apply(searchpartial)
 
 # EDX
 edx_df = edx_df.apply(get_category_edx, axis = 1)
 
 # Udacity
-a = udacity_df.apply(get_category_udacity, axis = 1)
+udacity_df = udacity_df.apply(get_category_udacity, axis = 1)
 
+
+# Futurelearn
+futurelearn_df = futurelearn_df.apply(get_category_futurelearn, axis = 1)
 
 
 
@@ -205,7 +213,8 @@ for feedurl in file('feedlist.txt'):
     apcount.setdefault(word,0)
     if count>1:
       apcount[word]+=1
-      
+    
+    
 wordlist=[]
 for w,bc in apcount.items(  ):
   frac=float(bc)/len(feedlist)
